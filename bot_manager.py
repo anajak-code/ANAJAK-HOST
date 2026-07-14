@@ -15,31 +15,49 @@ class BotManager:
         return bot_dir
     
     def save_bot_code(self, user_id, bot_id, code, requirements=''):
-        bot_dir = self.get_bot_dir(user_id, bot_id)
-        
-        with open(os.path.join(bot_dir, 'bot.py'), 'w', encoding='utf-8') as f:
-            f.write(code)
-        
-        if requirements:
-            with open(os.path.join(bot_dir, 'requirements.txt'), 'w') as f:
-                f.write(requirements)
-        
-        return bot_dir
+        try:
+            bot_dir = self.get_bot_dir(user_id, bot_id)
+            
+            # Save main bot file
+            with open(os.path.join(bot_dir, 'bot.py'), 'w', encoding='utf-8') as f:
+                f.write(code)
+            
+            # Save requirements
+            if requirements:
+                with open(os.path.join(bot_dir, 'requirements.txt'), 'w') as f:
+                    f.write(requirements)
+            
+            return True, "Code saved successfully"
+        except Exception as e:
+            return False, str(e)
     
     def start_bot(self, bot_id, user_id):
         bot = Bot.query.get(bot_id)
-        if not bot or bot.status == 'running':
+        if not bot:
+            return False, "Bot មិនមានក្នុងប្រព័ន្ធ"
+        
+        if bot.status == 'running':
             return False, "Bot កំពុងដំណើរការរួចហើយ"
         
-        bot_dir = self.get_bot_dir(user_id, bot_id)
-        bot_file = os.path.join(bot_dir, 'bot.py')
-        
-        if not os.path.exists(bot_file):
-            return False, "Bot code មិនមាន"
-        
         try:
+            bot_dir = self.get_bot_dir(user_id, bot_id)
+            bot_file = os.path.join(bot_dir, 'bot.py')
+            
+            if not os.path.exists(bot_file):
+                return False, "Bot code មិនមាន"
+            
+            # Replace token in code
+            with open(bot_file, 'r', encoding='utf-8') as f:
+                code = f.read()
+            
+            code = code.replace('YOUR_TOKEN', bot.token)
+            
+            temp_file = os.path.join(bot_dir, 'bot_running.py')
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                f.write(code)
+            
             process = subprocess.Popen(
-                [sys.executable, bot_file],
+                [sys.executable, temp_file],
                 cwd=bot_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -54,22 +72,29 @@ class BotManager:
             db.session.commit()
             
             self.add_log(bot_id, f"✅ Bot បានចាប់ផ្ដើម (PID: {process.pid})", 'success')
-            return True, "Bot បានចាប់ផ្ដើម"
+            return True, "Bot បានចាប់ផ្ើមដំណើរការ"
             
         except Exception as e:
-            self.add_log(bot_id, f" Error: {str(e)}", 'error')
-            return False, str(e)
+            error_msg = f"Error: {str(e)}"
+            self.add_log(bot_id, error_msg, 'error')
+            return False, error_msg
     
     def stop_bot(self, bot_id):
         bot = Bot.query.get(bot_id)
-        if not bot or bot.status != 'running':
+        if not bot:
+            return False, "Bot មិនមានក្នុងប្រព័ន្ធ"
+        
+        if bot.status != 'running':
             return False, "Bot មិនទាន់ដំណើរការ"
         
         try:
             if bot_id in self.processes:
                 process = self.processes[bot_id]
                 process.terminate()
-                process.wait(timeout=5)
+                try:
+                    process.wait(timeout=5)
+                except:
+                    process.kill()
                 del self.processes[bot_id]
             
             bot.status = 'stopped'
@@ -77,19 +102,22 @@ class BotManager:
             db.session.commit()
             
             self.add_log(bot_id, "⏹️ Bot បានបញ្ប់", 'warning')
-            return True, "Bot បានបញ្ឈប់"
+            return True, "Bot បានបញ្ឈប់ដំណើរការ"
             
         except Exception as e:
             return False, str(e)
     
     def add_log(self, bot_id, message, log_type='info'):
-        log = BotLog(
-            bot_id=bot_id,
-            message=message,
-            log_type=log_type,
-            timestamp=datetime.utcnow()
-        )
-        db.session.add(log)
-        db.session.commit()
+        try:
+            log = BotLog(
+                bot_id=bot_id,
+                message=message,
+                log_type=log_type,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(log)
+            db.session.commit()
+        except:
+            pass
 
 bot_manager = BotManager()
