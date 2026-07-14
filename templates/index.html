@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AHNAJAK-CODE HOST</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-robot"></i> AHNAJAK-CODE HOST</h1>
+            <p>Telegram Bot 24/7 Hosting Manager</p>
+        </header>
+
+        <div class="card">
+            <div class="status-indicator">
+                <span id="status-dot" class="dot offline"></span>
+                <h2 id="status-text">Checking Status...</h2>
+            </div>
+
+            <div class="controls">
+                <button id="btn-start" onclick="controlBot('start')">
+                    <i class="fa-solid fa-play"></i> Start Bot
+                </button>
+                <button id="btn-stop" onclick="controlBot('stop')" disabled>
+                    <i class="fa-solid fa-stop"></i> Stop Bot
+                </button>
+            </div>
+
+            <div class="logs">
+                <h3>System Logs</h3>
+                <div id="log-console">Waiting for actions...</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 AHNAJAK Development</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
