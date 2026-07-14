@@ -8,18 +8,15 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="nav-brand">
-            <a href="{{ url_for('index') }}">🤖 Bot Hosting Platform</a>
-        </div>
+        <div class="nav-brand"><a href="/">🤖 Anajak Host</a></div>
         <div class="nav-links">
             {% if current_user.is_authenticated %}
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('create_bot') }}">+ Create Bot</a>
-                <span class="user-info">{{ current_user.username }}</span>
-                <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+                <a href="/dashboard">Dashboard</a>
+                <span>{{ current_user.username }}</span>
+                <a href="/logout">Logout</a>
             {% else %}
-                <a href="{{ url_for('login') }}">Login</a>
-                <a href="{{ url_for('register') }}">Register</a>
+                <a href="/login/">Login</a>
+                <a href="/register/">Register</a>
             {% endif %}
         </div>
     </nav>
@@ -32,12 +29,7 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-
         {% block content %}{% endblock %}
     </main>
-
-    <footer>
-        <p>&copy; 2026 Bot Hosting Platform. Host your Telegram bots with ease.</p>
-    </footer>
 </body>
 </html>
