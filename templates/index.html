@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Bot Hosting{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>🚀 Host Your Telegram Bots</h1>
+    <p>Platform ដ៏ងាយស្រួលសម្រាប់ deploy និងគ្រប់គ្រង Telegram bots របស់អ្នក</p>
+    <div class="hero-buttons">
+        <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started</a>
+        <a href="{{ url_for('login') }}" class="btn btn-secondary">Login</a>
+    </div>
+</div>
+
+<div class="features">
+    <div class="feature-card">
+        <h3>⚡ Easy Deployment</h3>
+        <p>Upload Python code ហើយ run bot ភ្លាមៗ</p>
+    </div>
+    <div class="feature-card">
+        <h3>📊 Real-time Monitoring</h3>
+        <p>មើល logs និង stats បន្តផ្ទាល់</p>
+    </div>
+    <div class="feature-card">
+        <h3>🔒 Secure & Isolated</h3>
+        <p>Bot នីមួយៗដំណើរការដាច់ដោយឡែក</p>
+    </div>
+</div>
+{% endblock %}
