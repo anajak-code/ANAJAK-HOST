@@ -11,7 +11,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # ✅ បើក CORS សម្រាប់ Frontend របស់អ្នក
-CORS(app, supports_credentials=True, origins=["https://host.anajakcode.site", "http://anajak-host.vercel.app"])
+CORS(app, supports_credentials=True, origins=["https://host.anajakcode.site", "http://forest-smp-test.vercel.app"])
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
 database_url = os.getenv('DATABASE_URL')
