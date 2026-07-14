@@ -7,20 +7,32 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
+
+# ⚙️ Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///bots.db')
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///bots.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'login.index' # កែតម្រូវ path
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# ============================================================
+# 🗄️ DATABASE INIT
+# ============================================================
+with app.app_context():
+    db.create_all()
 
 # ============================================================
 # 🏠 PUBLIC ROUTES
@@ -31,15 +43,16 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('index.html')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+# --- Register Route ---
+@app.route('/register/', methods=['GET', 'POST'])
+def register_index():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
         if User.query.filter_by(username=username).first():
             flash('Username មានរួចហើយ!', 'error')
-            return redirect(url_for('register'))
+            return redirect(url_for('register_index'))
         
         user = User(username=username)
         user.set_password(password)
@@ -47,12 +60,13 @@ def register():
         db.session.commit()
         
         flash('✅ Register ជោគជ័យ! សូម Login', 'success')
-        return redirect(url_for('login'))
+        return redirect(url_for('login_index'))
     
-    return render_template('register.html')
+    return render_template('register/index.html')
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+# --- Login Route ---
+@app.route('/login/', methods=['GET', 'POST'])
+def login_index():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -61,11 +75,12 @@ def login():
         
         if user and user.check_password(password):
             login_user(user)
-            return redirect(url_for('dashboard'))
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('dashboard'))
         
         flash('❌ Username ឬ Password មិនត្រឹមត្រូវ!', 'error')
     
-    return render_template('login.html')
+    return render_template('login/index.html')
 
 @app.route('/logout')
 @login_required
@@ -74,7 +89,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ============================================================
-# 📊 DASHBOARD
+# 📊 DASHBOARD & BOT MANAGEMENT
 # ============================================================
 @app.route('/dashboard')
 @login_required
@@ -82,9 +97,6 @@ def dashboard():
     bots = Bot.query.filter_by(user_id=current_user.id).all()
     return render_template('dashboard.html', bots=bots)
 
-# ============================================================
-# 🤖 BOT MANAGEMENT
-# ============================================================
 @app.route('/bot/create', methods=['GET', 'POST'])
 @login_required
 def create_bot():
@@ -102,9 +114,7 @@ def create_bot():
         db.session.add(bot)
         db.session.commit()
         
-        # Save bot code
         bot_manager.save_bot_code(current_user.id, bot.id, code, requirements)
-        
         flash('✅ Bot បានបង្កើតជោគជ័យ!', 'success')
         return redirect(url_for('bot_detail', bot_id=bot.id))
     
@@ -120,7 +130,6 @@ def bot_detail(bot_id):
     
     logs = BotLog.query.filter_by(bot_id=bot_id).order_by(BotLog.timestamp.desc()).limit(50).all()
     stats = bot_manager.get_bot_stats(bot_id)
-    
     return render_template('bot_detail.html', bot=bot, logs=logs, stats=stats)
 
 @app.route('/bot/<int:bot_id>/start', methods=['POST'])
@@ -129,7 +138,6 @@ def start_bot(bot_id):
     bot = Bot.query.get_or_404(bot_id)
     if bot.user_id != current_user.id:
         return jsonify({'success': False, 'message': 'មិនមានសិទ្ធិ!'})
-    
     success, message = bot_manager.start_bot(bot_id, current_user.id)
     return jsonify({'success': success, 'message': message})
 
@@ -139,7 +147,6 @@ def stop_bot(bot_id):
     bot = Bot.query.get_or_404(bot_id)
     if bot.user_id != current_user.id:
         return jsonify({'success': False, 'message': 'មិនមានសិទ្ធិ!'})
-    
     success, message = bot_manager.stop_bot(bot_id)
     return jsonify({'success': success, 'message': message})
 
@@ -150,32 +157,12 @@ def delete_bot(bot_id):
     if bot.user_id != current_user.id:
         flash('❌ មិនមានសិទ្ធិ!', 'error')
         return redirect(url_for('dashboard'))
-    
-    # Stop bot if running
     if bot.status == 'running':
         bot_manager.stop_bot(bot_id)
-    
     db.session.delete(bot)
     db.session.commit()
-    
     flash('✅ Bot បានលុប!', 'success')
     return redirect(url_for('dashboard'))
-
-@app.route('/bot/<int:bot_id>/logs')
-@login_required
-def bot_logs(bot_id):
-    bot = Bot.query.get_or_404(bot_id)
-    if bot.user_id != current_user.id:
-        return jsonify({'logs': []})
-    
-    logs = bot_manager.get_logs(bot_id, current_user.id)
-    return jsonify({'logs': logs})
-
-# ============================================================
-# 🗄️ DATABASE INIT
-# ============================================================
-with app.app_context():
-    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
