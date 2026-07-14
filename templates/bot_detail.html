@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ bot.name }}{% endblock %}
+
+{% block content %}
+<div class="bot-detail-header">
+    <h1>{{ bot.name }}</h1>
+    <span class="status-badge status-{{ bot.status }}">{{ bot.status }}</span>
+</div>
+
+<div class="bot-info-grid">
+    <div class="info-card">
+        <h3>📋 Information</h3>
+        <p><strong>Token:</strong> {{ bot.token[:30] }}...</p>
+        <p><strong>PID:</strong> {{ bot.pid or 'N/A' }}</p>
+        <p><strong>Last Started:</strong> {{ bot.last_started or 'Never' }}</p>
+    </div>
+    
+    {% if stats %}
+    <div class="info-card">
+        <h3>📊 Stats</h3>
+        <p><strong>CPU:</strong> {{ stats.cpu_percent }}%</p>
+        <p><strong>Memory:</strong> {{ stats.memory_mb|round(2) }} MB</p>
+        <p><strong>Status:</strong> {{ stats.status }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="bot-controls">
+    {% if bot.status != 'running' %}
+        <button onclick="startBot({{ bot.id }})" class="btn btn-success">▶️ Start Bot</button>
+    {% else %}
+        <button onclick="stopBot({{ bot.id }})" class="btn btn-danger">⏹️ Stop Bot</button>
+    {% endif %}
+    <button onclick="deleteBot({{ bot.id }})" class="btn btn-danger">🗑️ Delete Bot</button>
+</div>
+
+<div class="logs-section">
+    <h2>📋 Logs</h2>
+    <div class="logs-container" id="logsContainer">
+        {% for log in logs %}
+        <div class="log-entry log-{{ log.log_type }}">
+            <span class="log-time">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+            <span class="log-message">{{ log.message }}</span>
+        </div>
+        {% else %}
+        <div class="empty-logs">No logs yet</div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+async function startBot(botId) {
+    const response = await fetch(`/bot/${botId}/start`, { method: 'POST' });
+    const result = await response.json();
+    alert(result.message);
+    location.reload();
+}
+
+async function stopBot(botId) {
+    const response = await fetch(`/bot/${botId}/stop`, { method: 'POST' });
+    const result = await response.json();
+    alert(result.message);
+    location.reload();
+}
+
+async function deleteBot(botId) {
+    if (!confirm('តើអ្នកចង់លុប Bot នេះមែនទេ?')) return;
+    
+    const response = await fetch(`/bot/${botId}/delete`, { method: 'POST' });
+    alert('Bot បានលុប!');
+    window.location.href = '/dashboard';
+}
+
+// Auto-refresh logs
+setInterval(async () => {
+    const response = await fetch(`/bot/{{ bot.id }}/logs`);
+    const data = await response.json();
+    
+    const container = document.getElementById('logsContainer');
+    container.innerHTML = data.logs.map(log => 
+        `<div class="log-entry"><span class="log-time">${log.time}</span> ${log.message}</div>`
+    ).join('');
+}, 5000);
+</script>
+{% endblock %}
