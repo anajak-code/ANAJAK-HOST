@@ -20,9 +20,9 @@ def add_log(message):
     timestamp = time.strftime("%H:%M:%S")
     log_entry = f"[{timestamp}] {message}"
     bot_logs.append(log_entry)
-    # Keep only last 50 logs
-    if len(bot_logs) > 50:
-        bot_logs = bot_logs[-50:]
+    # Keep only last 100 logs
+    if len(bot_logs) > 100:
+        bot_logs = bot_logs[-100:]
     print(log_entry)
 
 @app.route('/api/status', methods=['GET'])
@@ -47,35 +47,49 @@ def run_bot():
         return jsonify({"status": "error", "message": "Token and Code are required."})
 
     try:
-        # Create a temporary file for the user's code
-        # We inject the token into the code environment or replace a placeholder
         filename = "user_bot_script.py"
         
-        # Security Note: In a real production app, never execute raw user code like this.
-        # Here we save it to a file and run it.
-        with open(filename, "w") as f:
-            # We prepend some setup code to ensure the token is available
-            setup_code = f"""
+        # 1. Inject Token into code
+        setup_code = f"""
 import os
 os.environ['BOT_TOKEN'] = '{bot_token}'
+# Force output to appear immediately
+import sys
+sys.stdout.reconfigure(line_buffering=True)
 """
-            f.write(setup_code + "\n" + bot_code)
+        full_code = setup_code + "\n" + bot_code
+        
+        with open(filename, "w") as f:
+            f.write(full_code)
             
         add_log("Saving user code...")
         
-        # Start the bot in a separate process
-        # Using subprocess allows us to kill it later if needed
+        # 2. IMPORTANT: Install dependencies automatically before running
+        # This ensures python-telegram-bot is available even on Render Free tier
+        add_log("Installing required libraries (python-telegram-bot)...")
+        install_proc = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "python-telegram-bot", "requests"],
+            capture_output=True, text=True
+        )
+        
+        if install_proc.returncode != 0:
+            add_log(f"Installation Warning: {install_proc.stderr}")
+        else:
+            add_log("Libraries installed/updated successfully.")
+
+        # 3. Start the bot process
         bot_process = subprocess.Popen(
             [sys.executable, filename],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            stderr=subprocess.STDOUT, # Combine stderr into stdout so we see errors in logs
+            text=True,
+            bufsize=1 # Line buffered
         )
         
         is_running = True
         add_log("Bot process started.")
         
-        # Start a thread to read logs from the subprocess
+        # Start a thread to read logs
         log_thread = threading.Thread(target=read_bot_logs, args=(bot_process,))
         log_thread.daemon = True
         log_thread.start()
@@ -83,7 +97,7 @@ os.environ['BOT_TOKEN'] = '{bot_token}'
         return jsonify({"status": "success", "message": "Bot is starting..."})
 
     except Exception as e:
-        add_log(f"Error starting bot: {str(e)}")
+        add_log(f"CRITICAL ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
 @app.route('/api/stop', methods=['POST'])
@@ -100,15 +114,13 @@ def stop_bot():
                 bot_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 bot_process.kill()
-            add_log("Bot process terminated.")
+            add_log("Bot process terminated by user.")
         
         is_running = False
         bot_process = None
         
-        # Clean up the temporary file
         if os.path.exists("user_bot_script.py"):
             os.remove("user_bot_script.py")
-            add_log("Temporary script removed.")
             
         return jsonify({"status": "success", "message": "Bot stopped."})
         
@@ -116,20 +128,21 @@ def stop_bot():
         return jsonify({"status": "error", "message": str(e)})
 
 def read_bot_logs(process):
-    """Read stdout and stderr from the bot process"""
-    while process.poll() is None: # While process is running
-        output = process.stdout.readline()
-        error = process.stderr.readline()
-        
-        if output:
-            add_log(output.strip())
-        if error:
-            add_log(f"ERROR: {error.strip()}")
-            
+    """Read output from the bot process line by line"""
+    try:
+        while process.poll() is None:
+            line = process.stdout.readline()
+            if line:
+                add_log(line.strip())
+            else:
+                break # EOF
+    except Exception as e:
+        add_log(f"Log reader error: {e}")
+    
     # Process finished
     global is_running
     is_running = False
-    add_log("Bot process ended.")
+    add_log("Bot process ended unexpectedly or completed.")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
