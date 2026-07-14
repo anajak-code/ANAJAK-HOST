@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Create Bot{% endblock %}
+
+{% block content %}
+<h1>🤖 Create New Bot</h1>
+
+<form method="POST" class="form-card">
+    <div class="form-group">
+        <label>Bot Name:</label>
+        <input type="text" name="name" required placeholder="My Awesome Bot">
+    </div>
+    
+    <div class="form-group">
+        <label>Bot Token (from @BotFather):</label>
+        <input type="text" name="token" required placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz">
+    </div>
+    
+    <div class="form-group">
+        <label>Python Code:</label>
+        <textarea name="code" rows="20" required placeholder="# Your bot code here
+from telegram import Update
+from telegram.ext import Application, CommandHandler
+
+async def start(update, context):
+    await update.message.reply_text('Hello!')
+
+app = Application.builder().token('YOUR_TOKEN').build()
+app.add_handler(CommandHandler('start', start))
+app.run_polling()"></textarea>
+        <small>💡 Token របស់អ្នកនឹងត្រូវជំនួសដោយប្រព័ន្ធ</small>
+    </div>
+    
+    <div class="form-group">
+        <label>Requirements (optional):</label>
+        <textarea name="requirements" rows="5" placeholder="python-telegram-bot==21.6
+requests==2.31.0"></textarea>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Create Bot</button>
+</form>
+{% endblock %}
