@@ -7,10 +7,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Allow requests from your Vercel Frontend
 CORS(app, resources={r"/api/*": {"origins": "https://forest-smp-test.vercel.app"}})
 
-# Global variables to manage the bot process
 bot_process = None
 is_running = False
 bot_logs = []
@@ -20,7 +18,6 @@ def add_log(message):
     timestamp = time.strftime("%H:%M:%S")
     log_entry = f"[{timestamp}] {message}"
     bot_logs.append(log_entry)
-    # Keep only last 100 logs
     if len(bot_logs) > 100:
         bot_logs = bot_logs[-100:]
     print(log_entry)
@@ -37,7 +34,7 @@ def run_bot():
     global bot_process, is_running
     
     if is_running:
-        return jsonify({"status": "error", "message": "Bot is already running. Please stop it first."})
+        return jsonify({"status": "error", "message": "Bot is already running."})
     
     data = request.json
     bot_token = data.get('token')
@@ -49,11 +46,10 @@ def run_bot():
     try:
         filename = "user_bot_script.py"
         
-        # 1. Inject Token into code
+        # Inject Token
         setup_code = f"""
 import os
 os.environ['BOT_TOKEN'] = '{bot_token}'
-# Force output to appear immediately
 import sys
 sys.stdout.reconfigure(line_buffering=True)
 """
@@ -64,32 +60,30 @@ sys.stdout.reconfigure(line_buffering=True)
             
         add_log("Saving user code...")
         
-        # 2. IMPORTANT: Install dependencies automatically before running
-        # This ensures python-telegram-bot is available even on Render Free tier
-        add_log("Installing required libraries (python-telegram-bot)...")
+        # ✅ FIX: Force install specific version 20.7 to match the code syntax
+        add_log("Installing python-telegram-bot==20.7 (Required for your code)...")
         install_proc = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "python-telegram-bot", "requests"],
+            [sys.executable, "-m", "pip", "install", "python-telegram-bot==20.7", "requests"],
             capture_output=True, text=True
         )
         
         if install_proc.returncode != 0:
-            add_log(f"Installation Warning: {install_proc.stderr}")
+            add_log(f"Install Error: {install_proc.stderr}")
         else:
-            add_log("Libraries installed/updated successfully.")
+            add_log("Library installed successfully.")
 
-        # 3. Start the bot process
+        # Start Bot
         bot_process = subprocess.Popen(
             [sys.executable, filename],
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Combine stderr into stdout so we see errors in logs
+            stderr=subprocess.STDOUT, 
             text=True,
-            bufsize=1 # Line buffered
+            bufsize=1
         )
         
         is_running = True
         add_log("Bot process started.")
         
-        # Start a thread to read logs
         log_thread = threading.Thread(target=read_bot_logs, args=(bot_process,))
         log_thread.daemon = True
         log_thread.start()
@@ -114,7 +108,7 @@ def stop_bot():
                 bot_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 bot_process.kill()
-            add_log("Bot process terminated by user.")
+            add_log("Bot process terminated.")
         
         is_running = False
         bot_process = None
@@ -128,21 +122,19 @@ def stop_bot():
         return jsonify({"status": "error", "message": str(e)})
 
 def read_bot_logs(process):
-    """Read output from the bot process line by line"""
     try:
         while process.poll() is None:
             line = process.stdout.readline()
             if line:
                 add_log(line.strip())
             else:
-                break # EOF
+                break
     except Exception as e:
         add_log(f"Log reader error: {e}")
     
-    # Process finished
     global is_running
     is_running = False
-    add_log("Bot process ended unexpectedly or completed.")
+    add_log("Bot process ended.")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
