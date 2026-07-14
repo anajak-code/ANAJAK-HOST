@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anajak Bot Host</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --danger: #ef4444;
+            --success: #10b981;
+            --bg: #f9fafb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+        }
+        
+        body {
+            font-family: 'Kantumruy Pro', 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .header-icon { font-size: 2rem; }
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        /* Card */
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        /* Form */
+        .form-group { margin-bottom: 1.5rem; }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        /* Button */
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* Auth Toggle */
+        .auth-toggle {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        .link {
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .link:hover { text-decoration: underline; }
+        
+        /* Dashboard */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .btn-logout {
+            background: var(--danger);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        /* Bot List */
+        .bot-item {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .bot-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .bot-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-running {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-stopped {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .bot-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+        }
+        
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            transform: translateY(150%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show { transform: translateY(0); }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        
+        /* Hidden */
+        .hidden { display: none !important; }
+        
+        /* Loading */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <span class="header-icon"></span>
+        <h1 class="header-title">Anajak Bot Host</h1>
+    </div>
+
+    <div class="container">
+        <!-- Auth View -->
+        <div id="auth-view" class="card">
+            <!-- Login Form -->
+            <div id="login-form">
+                <h2 class="card-title">សូមចូលមកកាន់ Anajak Host 👋</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">ឈ្មោះអ្នកប្រើបរាស់ (Username)</label>
+                    <input type="text" id="login-username" class="form-input" placeholder="បញ្ូល Username">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">ពាក្យសម្ងាត់ (Password)</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="បញ្ចូល Password">
+                </div>
+                
+                <button class="btn btn-primary" onclick="handleLogin()" id="btn-login">
+                    Login
+                </button>
+                
+                <div class="auth-toggle">
+                    <span>មិនទាន់មានគណនី? </span>
+                    <span class="link" onclick="showRegister()">ចុះឈ្មោះសម្រាប់ខ្ញុំ</span>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="hidden">
+                <h2 class="card-title">បង្កើតគណនីថ្មី 🚀</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">ឈ្ោះអ្នកប្រើប្រាស់ (Username)</label>
+                    <input type="text" id="reg-username" class="form-input" placeholder="ជ្រើសរើស Username">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">ពាក្យសម្ងាត់ (Password)</label>
+                    <input type="password" id="reg-password" class="form-input" placeholder="បង្កើត Password">
+                </div>
+                
+                <button class="btn btn-primary" onclick="handleRegister()" id="btn-register">
+                    Register
+                </button>
+                
+                <div class="auth-toggle">
+                    <span>មានគណនីរួចហើយ? </span>
+                    <span class="link" onclick="showLogin()">ចូលមកកាន់ប្រព័ន្ធ</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="hidden">
+            <div class="dashboard-header">
+                <h2>សួស្តី, <span id="username-display"></span> 👋</h2>
+                <div class="user-info">
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Create Bot -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3 class="card-title" style="margin-bottom: 1.5rem;">➕ បង្កើត Bot ថ្មី</h3>
+                
+                <div class="form-group">
+                    <label class="form-label">ឈ្មោះ Bot</label>
+                    <input type="text" id="bot-name" class="form-input" placeholder="ឧ. MyTestBot">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Telegram Bot Token</label>
+                    <input type="text" id="bot-token" class="form-input" placeholder="123456:ABCdefGHI...">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">កូដ Python (Optional)</label>
+                    <textarea id="bot-code" class="form-input" style="min-height: 150px; font-family: monospace;" placeholder="from telegram import Update..."></textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="createBot()" id="btn-create">
+                    បង្ើត Bot
+                </button>
+            </div>
+
+            <!-- Bot List -->
+            <div class="card">
+                <h3 class="card-title" style="margin-bottom: 1.5rem;">📋 បញ្ជី Bots របស់អ្នក</h3>
+                <div id="bot-list">
+                    <div class="empty-state">កំពុងផ្ទុកទិន្នន័យ...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_URL = 'https://anajak-host.onrender.com';
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+
+        // Check Authentication
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API_URL}/api/me`, { credentials: 'include' });
+                const data = await res.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('auth-view').classList.add('hidden');
+                    document.getElementById('dashboard-view').classList.remove('hidden');
+                    document.getElementById('username-display').textContent = data.username;
+                    loadBots();
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+            }
+        }
+
+        // Toggle Forms
+        function showLogin() {
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        // Login
+        async function handleLogin() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            const btn = document.getElementById('btn-login');
+
+            if (!username || !password) {
+                showToast('សូមបញ្ចូល Username និង Password', 'error');
+                return;
+            }
+
+            setLoading(btn, true);
+            try {
+                const res = await fetch(`${API_URL}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('Login ជោគជ័យ! កំពុងនាំទៅ Dashboard...', 'success');
+                    setTimeout(checkAuth, 1000);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (error) {
+                showToast('មានបញ្ាក្នុងការតភ្ជាប់', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        // Register
+        async function handleRegister() {
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            const btn = document.getElementById('btn-register');
+
+            if (!username || !password) {
+                showToast('សូមបញ្ចូល Username និង Password', 'error');
+                return;
+            }
+
+            setLoading(btn, true);
+            try {
+                const res = await fetch(`${API_URL}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('ចុះឈ្មោះជោគជ័យ! សូម Login', 'success');
+                    setTimeout(showLogin, 1000);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (error) {
+                showToast('មានបញ្ហាក្នុងការតភ្ជាប់', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        // Logout
+        async function logout() {
+            await fetch(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+            showToast('បាន Logout ជោគជ័យ', 'success');
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('auth-view').classList.remove('hidden');
+        }
+
+        // Load Bots
+        async function loadBots() {
+            try {
+                const res = await fetch(`${API_URL}/api/bots`, { credentials: 'include' });
+                const bots = await res.json();
+                
+                const container = document.getElementById('bot-list');
+                
+                if (bots.length === 0) {
+                    container.innerHTML = '<div class="empty-state">អនកមិនទាន់មាន Bot ទេ</div>';
+                    return;
+                }
+                
+                container.innerHTML = bots.map(bot => `
+                    <div class="bot-item">
+                        <div>
+                            <div class="bot-name">${bot.name}</div>
+                            <span class="bot-status ${bot.status === 'running' ? 'status-running' : 'status-stopped'}">
+                                ${bot.status === 'running' ? 'កំពុងដំណើរការ' : 'ឈប់'}
+                            </span>
+                        </div>
+                        <div class="bot-actions">
+                            ${bot.status !== 'running' ? 
+                                `<button class="btn-sm btn-success" onclick="controlBot(${bot.id}, 'start')">▶ Start</button>` : 
+                                `<button class="btn-sm btn-danger" onclick="controlBot(${bot.id}, 'stop')">⏹ Stop</button>`
+                            }
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Load bots error:', error);
+            }
+        }
+
+        // Create Bot
+        async function createBot() {
+            const name = document.getElementById('bot-name').value.trim();
+            const token = document.getElementById('bot-token').value.trim();
+            const code = document.getElementById('bot-code').value.trim();
+            const btn = document.getElementById('btn-create');
+
+            if (!name || !token) {
+                showToast('សូមបញ្ចូល្មោះ និង Token', 'error');
+                return;
+            }
+
+            setLoading(btn, true);
+            try {
+                const res = await fetch(`${API_URL}/api/bots`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name, token, code, requirements: 'python-telegram-bot==21.6' })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('បង្កើត Bot ជោគជ័យ!', 'success');
+                    document.getElementById('bot-name').value = '';
+                    document.getElementById('bot-token').value = '';
+                    document.getElementById('bot-code').value = '';
+                    loadBots();
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (error) {
+                showToast('មានបញ្ហាក្ុងការតភ្ជាប់', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        // Control Bot
+        async function controlBot(botId, action) {
+            try {
+                const res = await fetch(`${API_URL}/api/bots/${botId}/${action}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                showToast(data.message, data.success ? 'success' : 'error');
+                setTimeout(loadBots, 1000);
+            } catch (error) {
+                showToast('មិនអាចគ្ប់គ្រង Bot បាន', 'error');
+            }
+        }
+
+        // Utilities
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.className = `toast toast-${type} show`;
+            toast.textContent = message;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function setLoading(btn, isLoading) {
+            if (isLoading) {
+                btn.dataset.originalText = btn.textContent;
+                btn.innerHTML = '<span class="spinner"></span> កំពុងដំណើរការ...';
+                btn.disabled = true;
+            } else {
+                btn.textContent = btn.dataset.originalText || 'Submit';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+  </html>
